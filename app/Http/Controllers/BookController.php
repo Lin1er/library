@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Http\Requests\StoreBookRequest;
+use Illuminate\Http\Request;
 use App\Http\Requests\UpdateBookRequest;
-
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\BooksImport;
 use App\Models\Category;
 
 
@@ -16,11 +18,9 @@ class BookController extends Controller
      */
     public function index()
     {
-        $category = Category::all();
         $books = Book::all();
         return view('book.books', [
             "title" => "Books",
-            'category' => $category,
             "books" => $books
         ]);
     }
@@ -30,11 +30,9 @@ class BookController extends Controller
      */
     public function show($id)
     {
-        $category = Category::all();
         $book = Book::find($id);
         return view('book.book', [
             "title" => "Detail Buku",
-            'category' => $category,
             "book" => $book
         ]);
     }
@@ -44,24 +42,45 @@ class BookController extends Controller
      */
     public function create()
     {
-        return view('book.create');
+        $book = Book::all();
+
+        return view('admin.books.create',[
+            'category' => $book->category,
+            'books' => $book,
+            'title' => 'Create Book'
+        ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreBookRequest $request)
+    public function store(Request $request)
     {
-        $book = new Book();
-        // Set the attributes of the book object based on the form inputs
-        $book->title = $request->input('title');
-        $book->author = $request->input('author');
-        // Save the book object to the database
+        $request->validate([
+            'title' => 'required',
+            'author' => 'required',
+            'thumbnail' => 'required|image|max:2048',
+        ]);
+
+        $book = new Book([
+            'title' => $request->title,
+            'author' => $request->author,
+            'synopsis' => $request->synopsis,
+        ]);
+
+        if ($request->hasFile('thumbnail')) {
+            $thumbnail = $request->file('thumbnail');
+            $thumbnailPath = $thumbnail->store('thumbnails', 'public');
+            $book->thumbnail_url = $thumbnailPath;
+        }
+
         $book->save();
 
-        return redirect()->route('books.index')->with('success', 'Book created successfully');
+        return redirect()->route('admin.index')->with('success', 'Buku berhasil ditambahkan.');
     }
 
+
+    
     /**
      * Show the form for editing the specified resource.
      */
@@ -71,7 +90,7 @@ class BookController extends Controller
             "book" => $book
         ]);
     }
-
+    
     /**
      * Update the specified resource in storage.
      */
@@ -82,10 +101,10 @@ class BookController extends Controller
         $book->author = $request->input('author');
         // Save the updated book object to the database
         $book->save();
-
+        
         return redirect()->route('books.index')->with('success', 'Book updated successfully');
     }
-
+    
     /**
      * Remove the specified resource from storage.
      */
@@ -93,7 +112,25 @@ class BookController extends Controller
     {
         // Delete the book from the database
         $book->delete();
-
+        
         return redirect()->route('books.index')->with('success', 'Book deleted successfully');
     }
 }
+
+// import data buku lewat excel
+    // public function import(Request $request)
+    // {
+    //     $request->validate([
+    //         'excel_file' => 'required|mimes:xls,xlsx',
+    //     ]);
+
+    //     $file = $request->file('excel_file');
+
+    //     try {
+    //         Excel::import(new BooksImport, $file);
+
+    //         return redirect()->route('books.index')->with('success', 'Data buku berhasil diimpor.');
+    //     } catch (\Exception $e) {
+    //         return redirect()->route('books.index')->with('error', 'Terjadi kesalahan saat mengimpor data buku.');
+    //     }
+    // }

@@ -2,6 +2,11 @@
 
 @section('styles')
    <link rel="stylesheet" href="css/login.css">
+   <style>
+      footer {
+         position: fixed
+      }
+   </style>
 @endsection
 
 @section('container')
